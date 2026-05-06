@@ -47,8 +47,8 @@ export default function ExportarScreen() {
     }
     setLoading(true);
     try {
-      const uri = await generarWord(resumen);
-      await compartirArchivo(uri);
+      const result = await generarWord(resumen);
+      await compartirArchivo(result);
     } catch (e: any) {
       console.error(e);
       if (Platform.OS === 'web') {

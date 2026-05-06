@@ -15,7 +15,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { ResumenCompensacion, GuardiaConCompensacion } from './types';
-import { formatFechaMilitar, formatFechaMilitarLarga, formatMinutosPed } from './utils';
+import { formatFechaMilitar, formatFechaMilitarLarga, formatClaseCompensada, formatTotalGuardia } from './utils';
 
 function cellBorders() {
   return {
@@ -79,7 +79,7 @@ function modalidadLines(gc: GuardiaConCompensacion): string[] {
   return [g.modalidad, `${ordenAbrev} N.°${num} del ${ordenFechaTxt}`];
 }
 
-export async function generarWord(resumen: ResumenCompensacion): Promise<string> {
+export async function generarWord(resumen: ResumenCompensacion): Promise<{ uri?: string; base64: string; fileName: string }> {
   const rows: TableRow[] = [];
 
   // Header row
@@ -148,53 +148,49 @@ export async function generarWord(resumen: ResumenCompensacion): Promise<string>
   });
 
   const base64 = await Packer.toBase64String(doc);
-
   const fileName = `compensacion_${Date.now()}.docx`;
-  const uri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || '') + fileName;
 
+  if (Platform.OS === 'web') {
+    // En web NO podemos usar FileSystem; devolvemos solo base64
+    return { base64, fileName };
+  }
+
+  const uri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || '') + fileName;
   await FileSystem.writeAsStringAsync(uri, base64, {
     encoding: FileSystem.EncodingType.Base64,
   });
-
-  return uri;
+  return { uri, base64, fileName };
 }
 
-export async function compartirArchivo(uri: string): Promise<void> {
+export async function compartirArchivo(result: { uri?: string; base64: string; fileName: string }): Promise<void> {
   if (Platform.OS === 'web') {
-    // On web, trigger a download
-    try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const byteChars = atob(base64);
-      const byteNumbers = new Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) {
-        byteNumbers[i] = byteChars.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = uri.split('/').pop() || 'compensacion.docx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Error en descarga web:', e);
-      throw e;
+    // Web: convertir base64 → Blob → trigger download
+    const byteChars = atob(result.base64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
     }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = result.fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     return;
   }
 
+  if (!result.uri) throw new Error('Archivo no disponible');
   const available = await Sharing.isAvailableAsync();
   if (!available) {
     throw new Error('La función de compartir no está disponible en este dispositivo');
   }
-  await Sharing.shareAsync(uri, {
+  await Sharing.shareAsync(result.uri, {
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     dialogTitle: 'Compartir tabla de compensación',
     UTI: 'org.openxmlformats.wordprocessingml.document',
