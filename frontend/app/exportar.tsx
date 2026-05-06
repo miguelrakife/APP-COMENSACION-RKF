@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../src/theme';
 import { getClases, getGuardias } from '../src/storage';
 import { calcularCompensacion } from '../src/compensation';
-import { formatFechaMilitar, formatFechaMilitarLarga, formatMinutosPed } from '../src/utils';
+import { formatFechaMilitar, formatFechaMilitarLarga, formatMinutosPed, formatClaseCompensada, formatTotalGuardia } from '../src/utils';
 import { ResumenCompensacion } from '../src/types';
 import { generarWord, compartirArchivo } from '../src/wordExport';
 
@@ -114,12 +114,12 @@ export default function ExportarScreen() {
                     ) : (
                       gc.clasesCompensadas.map((c, i) => (
                         <Text key={i} style={styles.td}>
-                          {formatMinutosPed(c.duracionMin)} de Clases del {formatFechaMilitar(c.fecha)}.
+                          {formatClaseCompensada(c)} de Clases del {formatFechaMilitar(c.fecha)}.
                         </Text>
                       ))
                     )}
                     <Text style={[styles.td, styles.tdBold]}>
-                      {'\n'}TOTAL {formatMinutosPed(gc.capacidadUsadaMin)} pedagógicas.
+                      {'\n'}TOTAL {formatTotalGuardia(gc.clasesCompensadas)} pedagógicas.
                     </Text>
                   </View>
                   <View style={[styles.tdBox, styles.colMod, styles.tdCenterBox]}>

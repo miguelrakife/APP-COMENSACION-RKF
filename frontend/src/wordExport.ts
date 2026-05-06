@@ -63,11 +63,11 @@ function horarioGuardiaLines(tipo: 'semana' | 'finde'): string[] {
 function tiemposCompensadosLines(gc: GuardiaConCompensacion): string[] {
   const lines: string[] = [];
   for (const c of gc.clasesCompensadas) {
-    const duracion = formatMinutosPed(c.duracionMin);
+    const duracion = formatClaseCompensada(c);
     lines.push(`${duracion} de Clases del ${formatFechaMilitar(c.fecha)}.`);
   }
   lines.push('');
-  lines.push(`TOTAL ${formatMinutosPed(gc.capacidadUsadaMin)} pedagógicas.`);
+  lines.push(`TOTAL ${formatTotalGuardia(gc.clasesCompensadas)} pedagógicas.`);
   return lines;
 }
 

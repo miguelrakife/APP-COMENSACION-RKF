@@ -8,7 +8,8 @@ export interface Clase {
   bloqueLabel: string; // e.g. "08:00 - 09:30" or custom
   horarioInicio: string; // HH:MM
   horarioFin: string; // HH:MM
-  duracionPedMin: number; // pedagogical minutes
+  duracionPedMin: number; // pedagogical minutes (para capacidad interna)
+  minCrono?: number; // si está presente, se muestra como "Xm" cronológicos en la tabla
   esPersonalizado: boolean;
   createdAt: string;
 }
@@ -27,7 +28,9 @@ export interface Guardia {
 export interface ClaseCompensada {
   claseId: string;
   fecha: string;
-  duracionMin: number; // puede ser parcial si se dividió
+  duracionMin: number; // puede ser parcial si se dividió (min pedag)
+  minCrono?: number; // si está presente, se muestra como Xm en la tabla
+  partial?: boolean; // true si la clase fue dividida
 }
 
 export interface GuardiaConCompensacion {

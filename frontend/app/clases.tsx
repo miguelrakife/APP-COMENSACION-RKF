@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, BLOQUES_PREDEFINIDOS, DURACION_BLOQUE_PED_MIN } from '../src/theme';
+import { theme, BLOQUES_PREDEFINIDOS } from '../src/theme';
 import { getClases, addClase, deleteClase } from '../src/storage';
 import { Clase } from '../src/types';
 import { formatFechaMilitar, formatMinutosPed, generarId, toISODate } from '../src/utils';
@@ -85,7 +85,8 @@ export default function ClasesScreen() {
         bloqueLabel: b.label,
         horarioInicio: b.inicio,
         horarioFin: b.fin,
-        duracionPedMin: DURACION_BLOQUE_PED_MIN,
+        duracionPedMin: b.duracionPedMin,
+        minCrono: b.displayLabel === '15m' ? 15 : undefined,
         esPersonalizado: false,
         createdAt: new Date().toISOString(),
       };
@@ -166,22 +167,32 @@ export default function ClasesScreen() {
               <DatePickerField label="Fecha de la clase" value={fecha} onChange={setFecha} testID="fecha-clase" />
 
               <Text style={styles.label}>Bloque horario</Text>
-              {BLOQUES_PREDEFINIDOS.map((b, i) => (
-                <TouchableOpacity
-                  key={b.label}
-                  style={[styles.bloqueOption, bloqueIdx === i && styles.bloqueOptionActive]}
-                  onPress={() => setBloqueIdx(i)}
-                  testID={`bloque-${i}`}
-                >
-                  <View style={styles.radio}>
-                    {bloqueIdx === i && <View style={styles.radioDot} />}
+              {BLOQUES_PREDEFINIDOS.map((b, i) => {
+                const pedLabel =
+                  b.duracionPedMin >= 60
+                    ? `${Math.floor(b.duracionPedMin / 60)}h pedag.`
+                    : `${b.duracionPedMin}m pedag.`;
+                return (
+                  <View key={b.label}>
+                    <TouchableOpacity
+                      style={[styles.bloqueOption, bloqueIdx === i && styles.bloqueOptionActive]}
+                      onPress={() => setBloqueIdx(i)}
+                      testID={`bloque-${i}`}
+                    >
+                      <View style={styles.radio}>
+                        {bloqueIdx === i && <View style={styles.radioDot} />}
+                      </View>
+                      <Text style={[styles.bloqueText, bloqueIdx === i && styles.bloqueTextActive]}>
+                        {b.label}
+                      </Text>
+                      <Text style={styles.bloquePed}>{pedLabel}</Text>
+                    </TouchableOpacity>
+                    {b.nota && bloqueIdx === i && (
+                      <Text style={styles.bloqueNota}>ⓘ {b.nota}</Text>
+                    )}
                   </View>
-                  <Text style={[styles.bloqueText, bloqueIdx === i && styles.bloqueTextActive]}>
-                    {b.label}
-                  </Text>
-                  <Text style={styles.bloquePed}>2h pedag.</Text>
-                </TouchableOpacity>
-              ))}
+                );
+              })}
               <TouchableOpacity
                 style={[styles.bloqueOption, bloqueIdx === 'otro' && styles.bloqueOptionActive]}
                 onPress={() => setBloqueIdx('otro')}
@@ -340,6 +351,14 @@ const styles = StyleSheet.create({
   bloqueText: { color: theme.colors.text, fontSize: theme.fontSize.md, fontWeight: '600', flex: 1 },
   bloqueTextActive: { color: theme.colors.primary },
   bloquePed: { color: theme.colors.textMuted, fontSize: theme.fontSize.xs, fontWeight: '700' },
+  bloqueNota: {
+    color: theme.colors.warning,
+    fontSize: theme.fontSize.xs,
+    fontStyle: 'italic',
+    marginTop: -4,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+  },
   customBox: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,

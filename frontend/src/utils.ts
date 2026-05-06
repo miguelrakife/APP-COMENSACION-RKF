@@ -75,3 +75,38 @@ export function formatNumeroOrden(tipo: string, numero: string, fecha: string): 
 export function generarId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
+
+// Re-export to keep at end:
+export function formatClaseCompensada(c: { duracionMin: number; minCrono?: number }): string {
+  if (c.minCrono !== undefined && c.minCrono > 0) {
+    return `${String(c.minCrono).padStart(2, '0')}m`;
+  }
+  return formatMinutosPed(c.duracionMin);
+}
+
+export function formatTotalGuardia(clases: { duracionMin: number; minCrono?: number }[]): string {
+  // Suma horas pedagógicas (de clases sin minCrono) y minutos cronológicos (de clases con minCrono) separadamente
+  let totalHoras = 0;
+  let totalMinPed = 0;
+  let totalMinCrono = 0;
+  for (const c of clases) {
+    if (c.minCrono !== undefined && c.minCrono > 0) {
+      totalMinCrono += c.minCrono;
+    } else {
+      const h = Math.floor(c.duracionMin / 60);
+      const m = c.duracionMin % 60;
+      totalHoras += h;
+      totalMinPed += m;
+    }
+  }
+  // Normalizar minutos pedagógicos sobrantes
+  totalHoras += Math.floor(totalMinPed / 60);
+  totalMinPed = totalMinPed % 60;
+  // Combinar: horas pedag + (min pedag sobrantes) + (min crono)
+  const parts: string[] = [];
+  if (totalHoras > 0) parts.push(`${String(totalHoras).padStart(2, '0')}h`);
+  const minTotal = totalMinPed + totalMinCrono;
+  if (minTotal > 0) parts.push(`${String(minTotal).padStart(2, '0')}m`);
+  return parts.length > 0 ? parts.join(' ') : '00h';
+}
+

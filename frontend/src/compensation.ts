@@ -40,10 +40,13 @@ export function calcularCompensacion(clases: Clase[], guardias: Guardia[]): Resu
       }
 
       const asignar = Math.min(minutosRestantes, libre);
+      const isFull = asignar === clase.duracionPedMin;
       gc.clasesCompensadas.push({
         claseId: clase.id,
         fecha: clase.fecha,
         duracionMin: asignar,
+        minCrono: isFull ? clase.minCrono : undefined,
+        partial: !isFull,
       });
       gc.capacidadUsadaMin += asignar;
       minutosRestantes -= asignar;

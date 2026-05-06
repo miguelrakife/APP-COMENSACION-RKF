@@ -45,16 +45,29 @@ export const theme = {
   },
 };
 
-export const BLOQUES_PREDEFINIDOS = [
-  { label: '08:00 - 09:30', inicio: '08:00', fin: '09:30' },
-  { label: '09:50 - 11:20', inicio: '09:50', fin: '11:20' },
-  { label: '11:40 - 13:10', inicio: '11:40', fin: '13:10' },
-  { label: '14:30 - 16:00', inicio: '14:30', fin: '16:00' },
-  { label: '15:00 - 16:30', inicio: '15:00', fin: '16:30' },
-  { label: '16:45 - 18:15', inicio: '16:45', fin: '18:15' },
-];
+export const DURACION_BLOQUE_PED_MIN = 120; // 2 horas pedagógicas = 120 min pedagógicos por defecto
 
-export const DURACION_BLOQUE_PED_MIN = 120; // 2 horas pedagógicas = 120 min pedagógicos
+export const BLOQUES_PREDEFINIDOS: {
+  label: string;
+  inicio: string;
+  fin: string;
+  duracionPedMin: number; // minutos pedagógicos a compensar
+  nota?: string;
+}[] = [
+  { label: '08:00 - 09:30', inicio: '08:00', fin: '09:30', duracionPedMin: 120 },
+  { label: '09:50 - 11:20', inicio: '09:50', fin: '11:20', duracionPedMin: 120 },
+  { label: '11:40 - 13:10', inicio: '11:40', fin: '13:10', duracionPedMin: 120 },
+  { label: '14:30 - 16:00', inicio: '14:30', fin: '16:00', duracionPedMin: 120 },
+  { label: '15:00 - 16:30', inicio: '15:00', fin: '16:30', duracionPedMin: 120 },
+  {
+    label: '16:45 - 18:15',
+    inicio: '16:45',
+    fin: '18:15',
+    duracionPedMin: 20, // 15 min cronológicos = 20 min pedagógicos (15 × 120/90)
+    displayLabel: '15m', // se muestra así en la tabla y en la lista
+    nota: 'Solo 15 min cronológicos compensables (16:45-17:00). Equivale a 20 min pedag.',
+  },
+];
 
 export const GUARDIA_SEMANA_CAP_MIN = 20 * 60; // 20 horas pedagógicas = 1200 min
 export const GUARDIA_FINDE_CAP_MIN = 32 * 60; // 32 horas pedagógicas = 1920 min
