@@ -24,6 +24,7 @@ import {
   esFinDeSemana,
 } from '../src/utils';
 import DatePickerField from '../src/DatePickerField';
+import ConfirmModal from '../src/ConfirmModal';
 
 export default function GuardiasScreen() {
   const [guardias, setGuardias] = useState<Guardia[]>([]);
@@ -86,24 +87,9 @@ export default function GuardiasScreen() {
     setModalOpen(false);
   };
 
-  const handleEliminar = (g: Guardia) => {
-    const fn = async () => {
-      await deleteGuardia(g.id);
-      await cargar();
-    };
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      if (confirm(`¿Eliminar ${g.modalidad.toLowerCase()} del ${formatFechaMilitar(g.fecha)}?`)) fn();
-    } else {
-      Alert.alert(
-        'Eliminar',
-        `¿Eliminar ${g.modalidad.toLowerCase()} del ${formatFechaMilitar(g.fecha)}?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Eliminar', style: 'destructive', onPress: fn },
-        ]
-      );
-    }
+  const handleEliminar = async (g: Guardia) => {
+    await deleteGuardia(g.id);
+    await cargar();
   };
 
   return (

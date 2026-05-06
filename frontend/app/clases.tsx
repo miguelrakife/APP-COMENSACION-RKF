@@ -18,6 +18,7 @@ import { getClases, addClase, deleteClase } from '../src/storage';
 import { Clase } from '../src/types';
 import { formatFechaMilitar, formatMinutosPed, generarId, toISODate } from '../src/utils';
 import DatePickerField from '../src/DatePickerField';
+import ConfirmModal from '../src/ConfirmModal';
 
 export default function ClasesScreen() {
   const [clases, setClases] = useState<Clase[]>([]);
@@ -98,20 +99,9 @@ export default function ClasesScreen() {
     setModalOpen(false);
   };
 
-  const handleEliminar = (c: Clase) => {
-    const confirmar = async () => {
-      await deleteClase(c.id);
-      await cargar();
-    };
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      if (confirm(`¿Eliminar clase del ${formatFechaMilitar(c.fecha)}?`)) confirmar();
-    } else {
-      Alert.alert('Eliminar clase', `¿Eliminar clase del ${formatFechaMilitar(c.fecha)}?`, [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: confirmar },
-      ]);
-    }
+  const handleEliminar = async (c: Clase) => {
+    await deleteClase(c.id);
+    await cargar();
   };
 
   return (
