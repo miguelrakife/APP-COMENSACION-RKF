@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../src/theme';
 import { getClases, getGuardias } from '../src/storage';
 import { calcularCompensacion } from '../src/compensation';
-import { formatMinutosPed, formatFechaMilitar } from '../src/utils';
+import { formatMinutosPed, formatFechaMilitar, formatTotalGuardia } from '../src/utils';
 import { ResumenCompensacion } from '../src/types';
 
 export default function Dashboard() {
@@ -13,13 +13,32 @@ export default function Dashboard() {
   const [clasesCount, setClasesCount] = useState(0);
   const [guardiasCount, setGuardiasCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [adeudadoFmt, setAdeudadoFmt] = useState('00h');
+  const [compensadoFmt, setCompensadoFmt] = useState('00h');
+  const [saldoFmt, setSaldoFmt] = useState('00h');
 
   const cargar = useCallback(async () => {
     const clases = await getClases();
     const guardias = await getGuardias();
     setClasesCount(clases.length);
     setGuardiasCount(guardias.length);
-    setResumen(calcularCompensacion(clases, guardias));
+    const r = calcularCompensacion(clases, guardias);
+    setResumen(r);
+
+    // Formato "Xh Ym" igual que la tabla
+    const adeudados = clases.map(c => ({ duracionMin: c.duracionPedMin, minCrono: c.minCrono }));
+    const compensados = r.guardias.flatMap(g => g.clasesCompensadas);
+    setAdeudadoFmt(formatTotalGuardia(adeudados));
+    setCompensadoFmt(formatTotalGuardia(compensados));
+
+    // Saldo: si saldoMin >= 0, capacidad disponible; si negativo, falta compensar
+    const saldoAbs = Math.abs(r.saldoMin);
+    const h = Math.floor(saldoAbs / 60);
+    const m = saldoAbs % 60;
+    const parts: string[] = [];
+    if (h > 0) parts.push(`${String(h).padStart(2, '0')}h`);
+    if (m > 0) parts.push(`${String(m).padStart(2, '0')}m`);
+    setSaldoFmt(parts.length > 0 ? parts.join(' ') : '00h');
   }, []);
 
   useFocusEffect(
@@ -60,7 +79,7 @@ export default function Dashboard() {
               {saldoPositivo ? 'CAPACIDAD DISPONIBLE' : 'FALTA COMPENSAR'}
             </Text>
             <Text style={styles.balanceValue} testID="balance-saldo">
-              {formatMinutosPed(Math.abs(saldo))}
+              {saldoFmt}
             </Text>
           </View>
           <Ionicons
@@ -84,7 +103,7 @@ export default function Dashboard() {
           <Ionicons name="time-outline" size={22} color={theme.colors.warning} />
           <Text style={styles.statLabel}>ADEUDADO</Text>
           <Text style={styles.statValue}>
-            {formatMinutosPed(resumen?.totalAdeudadoMin ?? 0)}
+            {adeudadoFmt}
           </Text>
           <Text style={styles.statSub}>{clasesCount} clases</Text>
         </View>
@@ -93,7 +112,7 @@ export default function Dashboard() {
           <Ionicons name="shield-checkmark-outline" size={22} color={theme.colors.primary} />
           <Text style={styles.statLabel}>COMPENSADO</Text>
           <Text style={styles.statValue}>
-            {formatMinutosPed(resumen?.totalCompensadoMin ?? 0)}
+            {compensadoFmt}
           </Text>
           <Text style={styles.statSub}>{guardiasCount} servicios</Text>
         </View>

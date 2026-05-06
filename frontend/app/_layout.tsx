@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { theme } from '../src/theme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import SplashScreen from '../src/SplashScreen';
 
 export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
@@ -88,6 +91,7 @@ export default function RootLayout() {
           }}
         />
       </Tabs>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
     </SafeAreaProvider>
   );
 }
