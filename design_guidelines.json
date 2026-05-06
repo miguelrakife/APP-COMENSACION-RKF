@@ -1,0 +1,89 @@
+{
+  "theme": "Light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast)",
+  "typography": {
+    "heading_font": "Chivo",
+    "body_font": "IBM Plex Sans",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl tracking-tight font-black",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-slate-500 uppercase tracking-wider"
+    }
+  },
+  "colors": {
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "primary": "#0F172A",
+    "primary_hover": "#1E293B",
+    "accent": "#DC2626",
+    "text_main": "#0F172A",
+    "text_muted": "#64748B",
+    "border": "#E2E8F0",
+    "success": "#16A34A",
+    "warning": "#EAB308",
+    "danger": "#DC2626"
+  },
+  "layout_and_spacing": {
+    "container_padding": "p-4 sm:p-6",
+    "card_padding": "p-4 sm:p-6",
+    "gap": "gap-4 sm:gap-6",
+    "radius": "rounded-none sm:rounded-md",
+    "shadows": "shadow-sm border border-slate-200"
+  },
+  "components": {
+    "navigation": "Sticky top bar or Bottom navigation for mobile. High contrast borders.",
+    "cards": "Flat background, 1px border (#E2E8F0), no shadow by default, subtle shadow on hover.",
+    "buttons": "Square or very slightly rounded (rounded-sm), strong contrast. Primary uses #0F172A text-white, Secondary uses bg-white border-slate-300.",
+    "forms": "Shadcn form components. Inputs with border-slate-300, focus:ring-2 focus:ring-slate-900. Predefined select dropdowns for time blocks and order types.",
+    "tables": "Dense rows, left-aligned for data, text-sm for better mobile fit. Horizontal scrolling if needed."
+  },
+  "visual_enhancers": {
+    "borders": "Use grid-like borders to separate sections. Tactical minimalism.",
+    "icons": "lucide-react (default choice for Shadcn)"
+  },
+  "pages": [
+    {
+      "name": "Dashboard",
+      "description": "Summary of pedagogical hours owed vs compensated. Large numeric displays.",
+      "layout": "Grid with 2 columns on mobile for stats, full width for recent activity."
+    },
+    {
+      "name": "Registro de Clases",
+      "description": "Form to log teaching hours. Predefined time blocks (08:00-09:30, 09:50-11:20, 11:40-13:10, 14:30-16:00, 15:00-16:30, 16:45-18:15) + Option for 'Other'.",
+      "layout": "Vertical form layout."
+    },
+    {
+      "name": "Registro de Guardias",
+      "description": "Form to log 24h guards. Type selector (Weekday 20h, Weekend 32h). Predefined order type (O/E, O/R, O/C).",
+      "layout": "Vertical form layout with toggle/select for day type."
+    },
+    {
+      "name": "Exportar",
+      "description": "View table of matches (classes to guards) and export to Word (.docx).",
+      "layout": "Data table with 'Export to Word' primary CTA."
+    }
+  ],
+  "accessibility_and_interactions": {
+    "hover_states": "Buttons must have explicit hover states (e.g. hover:bg-slate-800 hover:text-white).",
+    "focus": "focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:outline-none",
+    "test_ids": "All interactive elements MUST include data-testid attribute (e.g., data-testid='log-class-submit-button', data-testid='dashboard-tab'). Use kebab-case, role-based."
+  },
+  "media": {
+    "image_urls": [],
+    "icons_library": "lucide-react"
+  },
+  "instructions_to_main_agent": [
+    "Implement the UI using Shadcn components (Card, Form, Input, Select, Table, Button, Tabs).",
+    "Since it's a mobile web app, ensure touch targets are large enough (min h-10 for inputs/buttons).",
+    "Use localStorage/IndexedDB for React web PWA to save data locally as requested (100% local, no login).",
+    "Implement logic for calculating hours. Weekday guard = 15 chron hrs = 20 ped hrs. Weekend guard = 24 chron hrs = 32 ped hrs.",
+    "For the Word export feature (.docx), use a library like 'docx' or 'html-docx-js'. Generate a table with: N.°, Fecha, Horario, Tiempos compensados, Modalidad.",
+    "Make sure all components are created as .js files, NOT .tsx.",
+    "Ensure the app works perfectly on mobile viewports (responsive classes: 100% width on mobile, max-w-md or max-w-lg container).",
+    "Do not overuse the card component; consider flat layouts with border dividers.",
+    "Spanish language strictly for all user-facing text.",
+    "Follow the Archetype 4 Light Theme: Tactical, clear, high-contrast, no gradients, flat colors, authoritative tone."
+  ]
+}
