@@ -77,6 +77,16 @@ export default function RootLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="mas"
+          options={{
+            title: 'Más',
+            headerTitle: 'AJUSTES Y BACKUP',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="ellipsis-horizontal-circle" size={size} color={color} />
+            ),
+          }}
+        />
       </Tabs>
     </SafeAreaProvider>
   );

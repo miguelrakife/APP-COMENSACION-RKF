@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,12 +22,17 @@ import { generarWord, compartirArchivo } from '../src/wordExport';
 export default function ExportarScreen() {
   const [resumen, setResumen] = useState<ResumenCompensacion | null>(null);
   const [loading, setLoading] = useState(false);
+  const [filtroMes, setFiltroMes] = useState<string>(''); // YYYY-MM o vacío = todos
 
   const cargar = useCallback(async () => {
-    const clases = await getClases();
-    const guardias = await getGuardias();
+    let clases = await getClases();
+    let guardias = await getGuardias();
+    if (filtroMes) {
+      clases = clases.filter(c => c.fecha.startsWith(filtroMes));
+      guardias = guardias.filter(g => g.fecha.startsWith(filtroMes));
+    }
     setResumen(calcularCompensacion(clases, guardias));
-  }, []);
+  }, [filtroMes]);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,6 +77,18 @@ export default function ExportarScreen() {
       <ScrollView contentContainerStyle={styles.content} testID="exportar-scroll">
         <Text style={styles.headerSmall}>VISTA PREVIA</Text>
         <Text style={styles.headerTitle}>Tabla de compensación</Text>
+
+        <View style={styles.filterBox}>
+          <Text style={styles.filterLabel}>FILTRAR POR MES (YYYY-MM, vacío = todo)</Text>
+          <TextInput
+            style={styles.filterInput}
+            placeholder="ej: 2026-04"
+            placeholderTextColor={theme.colors.textFaint}
+            value={filtroMes}
+            onChangeText={setFiltroMes}
+            testID="filtro-mes"
+          />
+        </View>
 
         {!hasData && (
           <View style={styles.emptyCard}>
@@ -274,4 +292,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   exportBtnText: { color: '#fff', fontSize: theme.fontSize.md, fontWeight: '800', letterSpacing: 0.5 },
+  filterBox: { marginBottom: theme.spacing.md },
+  filterLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  filterInput: {
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+  },
 });
