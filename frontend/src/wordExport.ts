@@ -164,7 +164,7 @@ export async function generarWord(resumen: ResumenCompensacion): Promise<{ uri?:
 
 export async function compartirArchivo(result: { uri?: string; base64: string; fileName: string }): Promise<void> {
   if (Platform.OS === 'web') {
-    // Web: convertir base64 → Blob → trigger download
+    // Convertir base64 → Uint8Array → Blob
     const byteChars = atob(result.base64);
     const byteNumbers = new Array(byteChars.length);
     for (let i = 0; i < byteChars.length; i++) {
@@ -174,14 +174,48 @@ export async function compartirArchivo(result: { uri?: string; base64: string; f
     const blob = new Blob([byteArray], {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+
+    // En móvil web, usar Web Share API si está disponible (abre menú nativo de compartir)
+    try {
+      const nav: any = navigator;
+      if (nav.canShare && nav.share) {
+        const file = new File([blob], result.fileName, {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+        if (nav.canShare({ files: [file] })) {
+          await nav.share({
+            files: [file],
+            title: 'Tabla de Compensación',
+            text: 'Tabla de compensación horaria',
+          });
+          return;
+        }
+      }
+    } catch (err: any) {
+      // Si user canceló el share dialog, no es un error real
+      if (err && err.name === 'AbortError') return;
+      console.warn('Web Share falló, usando descarga clásica:', err);
+    }
+
+    // Fallback: descarga clásica con <a download>
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = result.fileName;
+    a.target = '_blank';
+    a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    // Si el navegador móvil aún no descargó, abrir en nueva pestaña como respaldo
+    setTimeout(() => {
+      try {
+        const url2 = URL.createObjectURL(blob);
+        window.open(url2, '_blank');
+      } catch {}
+    }, 500);
     return;
   }
 

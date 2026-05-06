@@ -49,6 +49,10 @@ export default function ExportarScreen() {
     try {
       const result = await generarWord(resumen);
       await compartirArchivo(result);
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        alert('✓ Documento generado. Si no apareció el menú de compartir, revisa la barra de descargas del navegador.');
+      }
     } catch (e: any) {
       console.error(e);
       if (Platform.OS === 'web') {
