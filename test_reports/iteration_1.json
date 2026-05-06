@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only smoke test of Expo web preview at 414x896. All core flows verified: Dashboard loads with balance/stats/equivalencias; Clases FAB + bloque selection + save (1 clase created); Guardias FAB + modalidad Servicio + orden OR #074 + save (1 guardia created); Exportar shows correct table format (N.°, 06MAY2026, 1700h.-0800h./15h crono/20h pedag, '02h de Clases del 06MAY2026.' + 'TOTAL 02h pedagógicas.', Servicio + OR N.°074 del 06MAYO2026); Word export button visible; Dashboard updates correctly (saldo=18h = 20h capacity - 2h adeudado).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RN Web", "issue": "Deprecation warnings only: 'shadow*' style props and props.pointerEvents deprecated. Non-blocking."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Optional: migrate shadow* styles to boxShadow and pointerEvents to style.pointerEvents to silence RN web deprecation warnings."],
+  "critical_code_review_comments": [
+    "compensation.ts logic is correct and handles splitting across guardias.",
+    "All interactive elements have testID as specified.",
+    "Storage uses AsyncStorage as per requirement; no backend calls.",
+    "Word export via docx library + expo-sharing looks correct (not triggered in automated run to avoid download dialog)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Created 1 clase (08:00-09:30, 2h pedag on today) + 1 guardia (Servicio, OR 074) via UI during automated smoke test. Data persists in browser AsyncStorage.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App is fully local-storage. Use viewport 414x896. Key testIDs: abrir-nueva-clase, bloque-0..N, bloque-otro, guardar-clase, abrir-nueva-guardia, modalidad-guardia, modalidad-servicio, orden-OE/orden-OR/orden-OC, orden-numero, guardar-guardia, exportar-word, balance-saldo. Did not trigger actual .docx download to avoid browser download dialog; recommend manual verification of Word file content.",
+  "rca_of_issue": "No bugs found."
+}
