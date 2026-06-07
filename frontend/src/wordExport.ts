@@ -1,232 +1,45 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  Table,
-  TableRow,
-  TableCell,
-  TextRun,
-  WidthType,
-  AlignmentType,
-  BorderStyle,
-  HeightRule,
-} from 'docx';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
-import { ResumenCompensacion, GuardiaConCompensacion } from './types';
-import { formatFechaMilitar, formatFechaMilitarLarga, formatClaseCompensada, formatTotalGuardia } from './utils';
+// ==============================================
+// GENERADOR DOCUMENTO GOLF
+// MUESTRA TODA LA LÓGICA: bloques, saldos, arrastre, consumo
+// ==============================================
+import { IDatosApp } from "./storage";
+import { formatearTiempoPedagogico, formatearMinutosCronologicos, agruparCompensacionesPorMes } from "./utils";
 
-function cellBorders() {
-  return {
-    top: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
-    bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
-    left: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
-    right: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
-  };
-}
+export const generarDocumentoGOLF = (datos: IDatosApp): string => {
+  let contenido = `DOCUMENTO GOLF - SISTEMA DE COMPENSACIONES RKF\n`;
+  contenido += `==============================================\n`;
+  contenido += `Regla: 45min cronológicos = 1h pedagógica | FIFO | Arrastre mensual\n\n`;
 
-function headerCell(text: string) {
-  return new TableCell({
-    borders: cellBorders(),
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text, bold: true, font: 'Times New Roman', size: 24 }),
-        ],
-      }),
-    ],
-  });
-}
-
-function textCell(lines: string[], align: AlignmentType = AlignmentType.LEFT) {
-  return new TableCell({
-    borders: cellBorders(),
-    children: lines.map(
-      (line) =>
-        new Paragraph({
-          alignment: align,
-          children: [new TextRun({ text: line, font: 'Times New Roman', size: 22 })],
-        })
-    ),
-  });
-}
-
-function horarioGuardiaLines(tipo: 'semana' | 'finde'): string[] {
-  if (tipo === 'semana') {
-    return ['1700h.-0800h.', '15h crono.', '20h pedag.'];
-  }
-  return ['0800h.-0800h.', '24h crono.', '32h pedag.'];
-}
-
-function tiemposCompensadosLines(gc: GuardiaConCompensacion): string[] {
-  const lines: string[] = [];
-  for (const c of gc.clasesCompensadas) {
-    const duracion = formatClaseCompensada(c);
-    lines.push(`${duracion} de Clases del ${formatFechaMilitar(c.fecha)}.`);
-  }
-  lines.push('');
-  lines.push(`TOTAL ${formatTotalGuardia(gc.clasesCompensadas)} pedagógicas.`);
-  return lines;
-}
-
-function modalidadLines(gc: GuardiaConCompensacion): string[] {
-  const g = gc.guardia;
-  const num = (g.ordenNumero || '').trim().padStart(3, '0');
-  const ordenFechaTxt = formatFechaMilitarLarga(g.ordenFecha);
-  const ordenAbrev = g.ordenTipo.replace('/', ''); // O/R -> OR
-  return [g.modalidad, `${ordenAbrev} N.°${num} del ${ordenFechaTxt}`];
-}
-
-export async function generarWord(resumen: ResumenCompensacion): Promise<{ uri?: string; base64: string; fileName: string }> {
-  const rows: TableRow[] = [];
-
-  // Header row
-  rows.push(
-    new TableRow({
-      tableHeader: true,
-      children: [
-        headerCell('N.°'),
-        headerCell('Fecha'),
-        headerCell('Horario'),
-        headerCell('Tiempos compensados'),
-        headerCell('Modalidad'),
-      ],
-    })
-  );
-
-  // Data rows
-  resumen.guardias.forEach((gc, idx) => {
-    const num = String(idx + 1).padStart(2, '0');
-    rows.push(
-      new TableRow({
-        children: [
-          textCell([num], AlignmentType.CENTER),
-          textCell([formatFechaMilitar(gc.guardia.fecha)], AlignmentType.LEFT),
-          textCell(horarioGuardiaLines(gc.guardia.tipo), AlignmentType.LEFT),
-          textCell(tiemposCompensadosLines(gc), AlignmentType.LEFT),
-          textCell(modalidadLines(gc), AlignmentType.CENTER),
-        ],
-      })
-    );
-  });
-
-  const table = new Table({
-    rows,
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    columnWidths: [800, 1600, 1800, 4200, 2400],
-  });
-
-  const doc = new Document({
-    creator: 'Compensador Horario',
-    title: 'Tabla de Compensación Horaria',
-    sections: [
-      {
-        properties: {
-          page: {
-            margin: { top: 720, right: 720, bottom: 720, left: 720 },
-          },
-        },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 },
-            children: [
-              new TextRun({
-                text: 'TABLA DE COMPENSACIÓN HORARIA',
-                bold: true,
-                font: 'Times New Roman',
-                size: 28,
-              }),
-            ],
-          }),
-          table,
-        ],
-      },
-    ],
-  });
-
-  const base64 = await Packer.toBase64String(doc);
-  const fileName = `compensacion_${Date.now()}.docx`;
-
-  if (Platform.OS === 'web') {
-    // En web NO podemos usar FileSystem; devolvemos solo base64
-    return { base64, fileName };
-  }
-
-  const uri = (FileSystem.documentDirectory || FileSystem.cacheDirectory || '') + fileName;
-  await FileSystem.writeAsStringAsync(uri, base64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return { uri, base64, fileName };
-}
-
-export async function compartirArchivo(result: { uri?: string; base64: string; fileName: string }): Promise<void> {
-  if (Platform.OS === 'web') {
-    // Convertir base64 → Uint8Array → Blob
-    const byteChars = atob(result.base64);
-    const byteNumbers = new Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) {
-      byteNumbers[i] = byteChars.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  // 🛡️ BOLSA DE GUARDIAS
+  contenido += `📋 BOLSA DE GUARDIAS Y ESTADO\n`;
+  contenido += `------------------------------\n`;
+  if (datos.guardias.length === 0) contenido += `Sin guardias registradas\n`;
+  datos.guardias.forEach(g => {
+    contenido += `Fecha: ${g.fecha} | Estado: ${g.estado}\n`;
+    contenido += `Original: ${formatearTiempoPedagogico(g.horasPedOriginal)}\n`;
+    contenido += `Utilizado: ${formatearTiempoPedagogico(g.horasPedUtilizadas)}\n`;
+    contenido += `Restante: ${formatearTiempoPedagogico(g.horasPedRestantes)}\n`;
+    contenido += `📅 Bloques generados automáticamente:\n`;
+    g.bloquesGenerados.forEach(b => {
+      contenido += `   • ${b.horaInicio} a ${b.horaFin} | ${formatearMinutosCronologicos(b.minutosCron)} | ${formatearTiempoPedagogico(b.horasPed)}\n`;
     });
-
-    // En móvil web, usar Web Share API si está disponible (abre menú nativo de compartir)
-    try {
-      const nav: any = navigator;
-      if (nav.canShare && nav.share) {
-        const file = new File([blob], result.fileName, {
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        });
-        if (nav.canShare({ files: [file] })) {
-          await nav.share({
-            files: [file],
-            title: 'Tabla de Compensación',
-            text: 'Tabla de compensación horaria',
-          });
-          return;
-        }
-      }
-    } catch (err: any) {
-      // Si user canceló el share dialog, no es un error real
-      if (err && err.name === 'AbortError') return;
-      console.warn('Web Share falló, usando descarga clásica:', err);
-    }
-
-    // Fallback: descarga clásica con <a download>
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = result.fileName;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-    // Si el navegador móvil aún no descargó, abrir en nueva pestaña como respaldo
-    setTimeout(() => {
-      try {
-        const url2 = URL.createObjectURL(blob);
-        window.open(url2, '_blank');
-      } catch {}
-    }, 500);
-    return;
-  }
-
-  if (!result.uri) throw new Error('Archivo no disponible');
-  const available = await Sharing.isAvailableAsync();
-  if (!available) {
-    throw new Error('La función de compartir no está disponible en este dispositivo');
-  }
-  await Sharing.shareAsync(result.uri, {
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    dialogTitle: 'Compartir tabla de compensación',
-    UTI: 'org.openxmlformats.wordprocessingml.document',
+    contenido += `------------------------------\n`;
   });
-}
+
+  // 📊 COMPENSACIONES POR MES (ARRASTRE)
+  contenido += `\n📆 COMPENSACIONES POR MES\n`;
+  contenido += `==========================\n`;
+  const porMes = agruparCompensacionesPorMes(datos.compensaciones);
+  if (Object.keys(porMes).length === 0) contenido += `Sin compensaciones registradas\n`;
+  Object.values(porMes).forEach((mes: any) => {
+    contenido += `\n${mes.nombreMes.toUpperCase()}\n`;
+    contenido += `Total compensado: ${formatearTiempoPedagogico(mes.totalHorasPed)}\n`;
+    mes.registros.forEach((r: any) => {
+      contenido += `   • Fecha: ${r.fecha} | Clases: ${r.clases}\n`;
+      contenido += `     Consumido: ${formatearTiempoPedagogico(r.horasPedCompensadas)}\n`;
+      contenido += `     Usado de: ${r.detalleConsumo.map((d:any) => d.fechaGuardia).join(", ")}\n`;
+    });
+  });
+
+  return contenido;
+};
