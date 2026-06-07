@@ -1,77 +1,40 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Clase, Guardia } from './types';
+// ==============================================
+// ALMACENAMIENTO LOCAL (OFFLINE, ARRASTRE PERMANENTE)
+// ==============================================
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { IGuardia, ICompensacion } from "./types";
 
-const KEYS = {
-  CLASES: '@compensador:clases',
-  GUARDIAS: '@compensador:guardias',
+export interface IDatosApp {
+  guardias: IGuardia[];
+  compensaciones: ICompensacion[];
+}
+
+// Datos iniciales vacíos
+const DATOS_INICIALES: IDatosApp = {
+  guardias: [],
+  compensaciones: []
 };
 
-export async function getClases(): Promise<Clase[]> {
+// Obtener todos los datos
+export const obtenerDatos = async (): Promise<IDatosApp> => {
   try {
-    const raw = await AsyncStorage.getItem(KEYS.CLASES);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+    const datosGuardados = await AsyncStorage.getItem("@app_compensaciones_rkf");
+    return datosGuardados ? JSON.parse(datosGuardados) : DATOS_INICIALES;
+  } catch (error) {
+    return DATOS_INICIALES;
   }
-}
+};
 
-export async function saveClases(clases: Clase[]): Promise<void> {
-  await AsyncStorage.setItem(KEYS.CLASES, JSON.stringify(clases));
-}
-
-export async function addClase(clase: Clase): Promise<void> {
-  const clases = await getClases();
-  clases.push(clase);
-  await saveClases(clases);
-}
-
-export async function deleteClase(id: string): Promise<void> {
-  const clases = await getClases();
-  await saveClases(clases.filter(c => c.id !== id));
-}
-
-export async function updateClase(clase: Clase): Promise<void> {
-  const clases = await getClases();
-  const idx = clases.findIndex(c => c.id === clase.id);
-  if (idx >= 0) {
-    clases[idx] = clase;
-    await saveClases(clases);
-  }
-}
-
-export async function getGuardias(): Promise<Guardia[]> {
+// Guardar todos los datos
+export const guardarDatos = async (datos: IDatosApp): Promise<void> => {
   try {
-    const raw = await AsyncStorage.getItem(KEYS.GUARDIAS);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
+    await AsyncStorage.setItem("@app_compensaciones_rkf", JSON.stringify(datos));
+  } catch (error) {
+    throw new Error("No se pudo guardar la información");
   }
-}
+};
 
-export async function saveGuardias(guardias: Guardia[]): Promise<void> {
-  await AsyncStorage.setItem(KEYS.GUARDIAS, JSON.stringify(guardias));
-}
-
-export async function addGuardia(guardia: Guardia): Promise<void> {
-  const guardias = await getGuardias();
-  guardias.push(guardia);
-  await saveGuardias(guardias);
-}
-
-export async function deleteGuardia(id: string): Promise<void> {
-  const guardias = await getGuardias();
-  await saveGuardias(guardias.filter(g => g.id !== id));
-}
-
-export async function updateGuardia(guardia: Guardia): Promise<void> {
-  const guardias = await getGuardias();
-  const idx = guardias.findIndex(g => g.id === guardia.id);
-  if (idx >= 0) {
-    guardias[idx] = guardia;
-    await saveGuardias(guardias);
-  }
-}
-
-export async function clearAll(): Promise<void> {
-  await AsyncStorage.multiRemove([KEYS.CLASES, KEYS.GUARDIAS]);
-}
+// Borrar todo (solo si lo necesitas)
+export const borrarDatos = async (): Promise<void> => {
+  await AsyncStorage.removeItem("@app_compensaciones_rkf");
+};
