@@ -1,112 +1,89 @@
-const MESES_CORTOS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-const MESES_LARGOS = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+// ==============================================
+// UTILIDADES Y CÁLCULOS - REGLAS FIJAS
+// ==============================================
+import { IGuardia, IBloqueGuardia } from "./types";
 
-export function formatFechaMilitar(iso: string): string {
-  // "2026-04-19" -> "19ABR2026"
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-').map(Number);
-  const dd = String(d).padStart(2, '0');
-  const mmm = MESES_CORTOS[m - 1] || '';
-  return `${dd}${mmm}${y}`;
-}
+// REGLA PRINCIPAL: 45 minutos cronológicos = 1 hora pedagógica
+export const MINUTOS_POR_HORA_PEDAGOGICA = 45;
+export const HORA_INICIO_BLOQUE = 8 * 60; // 08:00 en minutos del día
 
-export function formatFechaMilitarLarga(iso: string): string {
-  // "2026-04-16" -> "16ABRIL2026"
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-').map(Number);
-  const dd = String(d).padStart(2, '0');
-  const mes = MESES_LARGOS[m - 1] || '';
-  return `${dd}${mes}${y}`;
-}
+// Conversiones
+export const cronologicoAPedagogico = (minutosCron: number): number => {
+  return minutosCron / MINUTOS_POR_HORA_PEDAGOGICA;
+};
 
-export function formatFechaCorta(iso: string): string {
-  // "2026-04-19" -> "19/04/2026"
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
+export const pedagogicoACronologico = (horasPed: number): number => {
+  return horasPed * MINUTOS_POR_HORA_PEDAGOGICA;
+};
 
-export function toISODate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+// Formateos para mostrar
+export const formatearTiempoPedagogico = (horasPed: number): string => {
+  const totalMin = Math.round(horasPed * MINUTOS_POR_HORA_PEDAGOGICA);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${m.toString().padStart(2, "0")}m`;
+};
 
-export function parseISODate(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-export function esFinDeSemana(iso: string): boolean {
-  const date = parseISODate(iso);
-  const dia = date.getDay(); // 0=dom, 6=sab
-  return dia === 0 || dia === 6;
-}
-
-export function formatMinutosPed(minutos: number): string {
-  // 120 -> "02h"
-  // 75  -> "01h 15m"
-  // 15  -> "15m"
-  if (minutos <= 0) return '00h';
+export const formatearMinutosCronologicos = (minutos: number): string => {
   const h = Math.floor(minutos / 60);
   const m = minutos % 60;
-  if (h === 0) return `${String(m).padStart(2, '0')}m`;
-  if (m === 0) return `${String(h).padStart(2, '0')}h`;
-  return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
-}
+  return `${h}h ${m.toString().padStart(2, "0")}m`;
+};
 
-export function formatHorarioGuardia(tipo: 'semana' | 'finde'): string {
-  if (tipo === 'semana') return '1700h.-0800h.\n15h crono.\n20h pedag.';
-  return '0800h.-0800h.\n24h crono.\n32h pedag.';
-}
+export const minutosAHorario = (minutos: number): string => {
+  const minutosAjustados = minutos % (24 * 60);
+  const h = Math.floor(minutosAjustados / 60);
+  const m = minutosAjustados % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+};
 
-export function formatHorarioGuardiaInline(tipo: 'semana' | 'finde'): string {
-  if (tipo === 'semana') return '17:00 - 08:00 · 15h crono · 20h pedag';
-  return '08:00 - 08:00 · 24h crono · 32h pedag';
-}
+// Generar bloques automáticos (empieza 08:00, sigue donde terminó)
+export const generarBloquesGuardia = (guardia: IGuardia): IBloqueGuardia[] => {
+  const bloques: IBloqueGuardia[] = [];
+  let minutosDisponibles = guardia.minutosCronOriginal;
+  let minutosInicio = HORA_INICIO_BLOQUE;
 
-export function formatNumeroOrden(tipo: string, numero: string, fecha: string): string {
-  const num = (numero || '').trim();
-  const fechaLarga = formatFechaMilitarLarga(fecha);
-  return `${tipo} N.°${num.padStart(3, '0')} del ${fechaLarga}`;
-}
+  while (minutosDisponibles > 0.1) {
+    const minutosBloque = Math.min(minutosDisponibles, (24 * 60) - (minutosInicio % (24 * 60)));
+    if (minutosBloque <= 0) break;
 
-export function generarId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
-}
+    const minutosFin = minutosInicio + minutosBloque;
+    const horasPedBloque = cronologicoAPedagogico(minutosBloque);
 
-// Re-export to keep at end:
-export function formatClaseCompensada(c: { duracionMin: number; minCrono?: number }): string {
-  if (c.minCrono !== undefined && c.minCrono > 0) {
-    return `${String(c.minCrono).padStart(2, '0')}m`;
+    bloques.push({
+      idBloque: Date.now().toString() + Math.random().toString(),
+      horaInicio: minutosAHorario(minutosInicio),
+      horaFin: minutosAHorario(minutosFin),
+      minutosCron: minutosBloque,
+      horasPed: Number(horasPedBloque.toFixed(4))
+    });
+
+    minutosDisponibles -= minutosBloque;
+    minutosInicio = minutosFin;
   }
-  return formatMinutosPed(c.duracionMin);
-}
 
-export function formatTotalGuardia(clases: { duracionMin: number; minCrono?: number }[]): string {
-  // Suma horas pedagógicas (de clases sin minCrono) y minutos cronológicos (de clases con minCrono) separadamente
-  let totalHoras = 0;
-  let totalMinPed = 0;
-  let totalMinCrono = 0;
-  for (const c of clases) {
-    if (c.minCrono !== undefined && c.minCrono > 0) {
-      totalMinCrono += c.minCrono;
-    } else {
-      const h = Math.floor(c.duracionMin / 60);
-      const m = c.duracionMin % 60;
-      totalHoras += h;
-      totalMinPed += m;
+  return bloques;
+};
+
+// Sistema FIFO: obtener guardia MÁS ANTIGUA y ACTIVA
+export const obtenerGuardiaDisponible = (guardias: IGuardia[]): IGuardia | null => {
+  return guardias
+    .filter(g => g.estado === "ACTIVA" && g.horasPedRestantes > 0.001)
+    .sort((a, b) => a.fechaCompleta.getTime() - b.fechaCompleta.getTime())[0] || null;
+};
+
+// Agrupar compensaciones por mes
+export const agruparCompensacionesPorMes = (compensaciones: any[]) => {
+  return compensaciones.reduce((grupos: any, comp: any) => {
+    if (!grupos[comp.mesAnio]) {
+      grupos[comp.mesAnio] = {
+        nombreMes: comp.nombreMes,
+        totalHorasPed: 0,
+        registros: []
+      };
     }
-  }
-  // Normalizar minutos pedagógicos sobrantes
-  totalHoras += Math.floor(totalMinPed / 60);
-  totalMinPed = totalMinPed % 60;
-  // Combinar: horas pedag + (min pedag sobrantes) + (min crono)
-  const parts: string[] = [];
-  if (totalHoras > 0) parts.push(`${String(totalHoras).padStart(2, '0')}h`);
-  const minTotal = totalMinPed + totalMinCrono;
-  if (minTotal > 0) parts.push(`${String(minTotal).padStart(2, '0')}m`);
-  return parts.length > 0 ? parts.join(' ') : '00h';
-}
-
+    grupos[comp.mesAnio].totalHorasPed += comp.horasPedCompensadas;
+    grupos[comp.mesAnio].registros.push(comp);
+    return grupos;
+  }, {});
+};
