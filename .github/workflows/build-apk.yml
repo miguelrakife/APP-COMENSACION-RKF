@@ -1,4 +1,3 @@
-
 name: Compilar APK Compensación
 on:
   push:
@@ -12,19 +11,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Instalar EAS CLI
-        run: npm install -g eas-cli
+      - name: Instalar herramientas
+        run: |
+          npm install -g eas-cli
+          sudo apt install jq -y
       - name: Compilar APK INSTALABLE
         run: cd frontend && eas build -p android --profile preview --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      - name: Descargar APK
+      - name: Obtener enlace y descargar
         id: get-apk
         run: |
+          cd frontend
           URL=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].artifacts.buildUrl')
           curl -L -o Compensacion.apk "$URL"
-      - name: Guardar APK para descargar
+      - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: Compensacion-APK-Instalable
-          path: Compensacion.apk
+          path: frontend/Compensacion.apk
+          
