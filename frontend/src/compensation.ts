@@ -1,83 +1,115 @@
-import { Clase, Guardia, ResumenCompensacion, GuardiaConCompensacion, ClaseCompensada } from './types';
-import { GUARDIA_SEMANA_CAP_MIN, GUARDIA_FINDE_CAP_MIN } from './theme';
+// ==============================================
+// LÓGICA PRINCIPAL DE COMPENSACIONES
+// ARRASTRE MENSUAL | FIFO | BLOQUES AUTOMÁTICOS
+// ==============================================
+import { IGuardia, ICompensacion } from "./types";
+import {
+  cronologicoAPedagogico,
+  generarBloquesGuardia,
+  obtenerGuardiaDisponible
+} from "./utils";
+import { guardarDatos, obtenerDatos } from "./storage";
 
-function capacidadGuardia(tipo: 'semana' | 'finde'): number {
-  return tipo === 'semana' ? GUARDIA_SEMANA_CAP_MIN : GUARDIA_FINDE_CAP_MIN;
-}
+// 🛡️ Registrar nueva guardia (bolsa de horas)
+export const registrarGuardia = async (fecha: string, horasCronologicas: number): Promise<{exito: boolean; mensaje: string}> => {
+  try {
+    const minutosCron = horasCronologicas * 60;
+    const horasPed = cronologicoAPedagogico(minutosCron);
 
-/**
- * Asigna clases a guardias en orden cronológico.
- * Si una clase no cabe completa en una guardia, se divide.
- */
-export function calcularCompensacion(clases: Clase[], guardias: Guardia[]): ResumenCompensacion {
-  // Ordenar por fecha ASC
-  const clasesOrden = [...clases].sort((a, b) => a.fecha.localeCompare(b.fecha));
-  const guardiasOrden = [...guardias].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const nuevaGuardia: IGuardia = {
+      id: Date.now().toString(),
+      fecha,
+      fechaCompleta: new Date(fecha),
+      minutosCronOriginal: minutosCron,
+      horasPedOriginal: Number(horasPed.toFixed(4)),
+      horasPedUtilizadas: 0,
+      horasPedRestantes: Number(horasPed.toFixed(4)),
+      estado: "ACTIVA",
+      bloquesGenerados: []
+    };
 
-  const guardiasComp: GuardiaConCompensacion[] = guardiasOrden.map(g => ({
-    guardia: g,
-    clasesCompensadas: [],
-    capacidadTotalMin: capacidadGuardia(g.tipo),
-    capacidadUsadaMin: 0,
-  }));
+    // Generar bloques y horarios automáticos
+    nuevaGuardia.bloquesGenerados = generarBloquesGuardia(nuevaGuardia);
 
-  const clasesPendientes: ClaseCompensada[] = [];
-  const totalAdeudadoMin = clasesOrden.reduce((s, c) => s + c.duracionPedMin, 0);
+    // Guardar
+    const datos = await obtenerDatos();
+    datos.guardias.push(nuevaGuardia);
+    await guardarDatos(datos);
 
-  // Cola de "restos" pendientes de asignar (clase, minutos restantes)
-  let idxGuardia = 0;
+    return { exito: true, mensaje: `Guardia registrada. Disponible: ${horasPed.toFixed(2)}h pedagógicas` };
+  } catch (error) {
+    return { exito: false, mensaje: "Error al registrar guardia" };
+  }
+};
 
-  for (const clase of clasesOrden) {
-    let minutosRestantes = clase.duracionPedMin;
+// ⚖️ Consumir horas (SISTEMA FIFO: más antigua primero)
+export const consumirHoras = async (horasPedNecesarias: number): Promise<{exito: boolean; detalle: any[]}> => {
+  const datos = await obtenerDatos();
+  let horasRestantes = horasPedNecesarias;
+  const detalleConsumo: any[] = [];
 
-    while (minutosRestantes > 0 && idxGuardia < guardiasComp.length) {
-      const gc = guardiasComp[idxGuardia];
-      const libre = gc.capacidadTotalMin - gc.capacidadUsadaMin;
+  while (horasRestantes > 0.001) {
+    const guardia = obtenerGuardiaDisponible(datos.guardias);
+    if (!guardia) return { exito: false, detalle: [] };
 
-      if (libre <= 0) {
-        idxGuardia++;
-        continue;
-      }
+    const disponible = guardia.horasPedRestantes;
+    const consumo = Math.min(horasRestantes, disponible);
 
-      const asignar = Math.min(minutosRestantes, libre);
-      const isFull = asignar === clase.duracionPedMin;
-      gc.clasesCompensadas.push({
-        claseId: clase.id,
-        fecha: clase.fecha,
-        duracionMin: asignar,
-        minCrono: isFull ? clase.minCrono : undefined,
-        partial: !isFull,
-      });
-      gc.capacidadUsadaMin += asignar;
-      minutosRestantes -= asignar;
+    // Actualizar saldos
+    guardia.horasPedUtilizadas = Number((guardia.horasPedUtilizadas + consumo).toFixed(4));
+    guardia.horasPedRestantes = Number((disponible - consumo).toFixed(4));
 
-      if (gc.capacidadUsadaMin >= gc.capacidadTotalMin) {
-        idxGuardia++;
-      }
+    // Cerrar si se agotó
+    if (guardia.horasPedRestantes < 0.001) {
+      guardia.estado = "AGOTADA";
     }
 
-    if (minutosRestantes > 0) {
-      clasesPendientes.push({
-        claseId: clase.id,
-        fecha: clase.fecha,
-        duracionMin: minutosRestantes,
-      });
-    }
+    detalleConsumo.push({
+      fechaGuardia: guardia.fecha,
+      horasConsumidas: consumo,
+      saldoRestante: guardia.horasPedRestantes
+    });
+
+    horasRestantes -= consumo;
   }
 
-  const totalCompensadoMin = guardiasComp.reduce((s, g) => s + g.capacidadUsadaMin, 0);
-  const capacidadTotalGuardias = guardiasComp.reduce((s, g) => s + g.capacidadTotalMin, 0);
+  await guardarDatos(datos);
+  return { exito: true, detalle: detalleConsumo };
+};
 
-  // Saldo: capacidad total disponible - total adeudado
-  // positivo = sobra capacidad (puede asumir más clases)
-  // negativo = faltan guardias
-  const saldoMin = capacidadTotalGuardias - totalAdeudadoMin;
+// 📝 Registrar compensación + agrupar por mes
+export const registrarCompensacion = async (
+  clases: number,
+  fecha: string,
+  horasPedCompensar: number
+): Promise<{exito: boolean; mensaje: string}> => {
+  try {
+    const fechaObj = new Date(fecha);
+    const mesAnio = `${fechaObj.getMonth() + 1}/${fechaObj.getFullYear()}`;
+    const nombreMes = fechaObj.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
 
-  return {
-    totalAdeudadoMin,
-    totalCompensadoMin,
-    saldoMin,
-    guardias: guardiasComp,
-    clasesPendientes,
-  };
-}
+    // Consumir horas según regla FIFO
+    const consumo = await consumirHoras(horasPedCompensar);
+    if (!consumo.exito) return { exito: false, mensaje: "No hay horas disponibles en guardias activas" };
+
+    // Guardar compensación
+    const nuevaCompensacion: ICompensacion = {
+      id: Date.now().toString(),
+      clases,
+      fecha,
+      mesAnio,
+      nombreMes,
+      horasPedCompensadas: horasPedCompensar,
+      detalleConsumo: consumo.detalle,
+      fechaRegistro: new Date().toISOString()
+    };
+
+    const datos = await obtenerDatos();
+    datos.compensaciones.push(nuevaCompensacion);
+    await guardarDatos(datos);
+
+    return { exito: true, mensaje: `Compensación registrada para ${nombreMes}. Se usaron guardias por antigüedad.` };
+  } catch (error) {
+    return { exito: false, mensaje: "Error al registrar compensación" };
+  }
+};
