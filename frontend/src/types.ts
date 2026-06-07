@@ -1,49 +1,47 @@
-export type OrderType = 'O/E' | 'O/R' | 'O/C';
-export type GuardiaType = 'semana' | 'finde';
-export type Modalidad = 'Guardia' | 'Servicio';
+// ==============================================
+// TIPOS DE DATOS - SISTEMA DE COMPENSACIONES RKF
+// REGLAS: 45min cron = 1h pedagógica | FIFO | Arrastre mensual
+// ==============================================
 
-export interface Clase {
-  id: string;
-  fecha: string; // ISO date YYYY-MM-DD
-  bloqueLabel: string; // e.g. "08:00 - 09:30" or custom
-  horarioInicio: string; // HH:MM
-  horarioFin: string; // HH:MM
-  duracionPedMin: number; // pedagogical minutes (para capacidad interna)
-  minCrono?: number; // si está presente, se muestra como "Xm" cronológicos en la tabla
-  esPersonalizado: boolean;
-  createdAt: string;
+export type EstadoGuardia = "ACTIVA" | "AGOTADA";
+
+export interface IBloqueGuardia {
+  idBloque: string;
+  horaInicio: string; // formato HH:MM
+  horaFin: string;
+  minutosCron: number;
+  horasPed: number;
 }
 
-export interface Guardia {
+export interface IGuardia {
   id: string;
-  fecha: string; // ISO date YYYY-MM-DD (día de inicio de la guardia/servicio)
-  tipo: GuardiaType;
-  modalidad: Modalidad; // Guardia o Servicio
-  ordenTipo: OrderType;
-  ordenNumero: string;
-  ordenFecha: string; // ISO YYYY-MM-DD
-  createdAt: string;
+  fecha: string; // formato YYYY-MM-DD
+  fechaCompleta: Date;
+  minutosCronOriginal: number;
+  horasPedOriginal: number;
+  horasPedUtilizadas: number;
+  horasPedRestantes: number;
+  estado: EstadoGuardia;
+  bloquesGenerados: IBloqueGuardia[];
 }
 
-export interface ClaseCompensada {
-  claseId: string;
+export interface ICompensacion {
+  id: string;
+  clases: number;
   fecha: string;
-  duracionMin: number; // puede ser parcial si se dividió (min pedag)
-  minCrono?: number; // si está presente, se muestra como Xm en la tabla
-  partial?: boolean; // true si la clase fue dividida
+  mesAnio: string; // ej: "4/2026"
+  nombreMes: string; // ej: "abril de 2026"
+  horasPedCompensadas: number;
+  detalleConsumo: Array<{
+    fechaGuardia: string;
+    horasConsumidas: number;
+    saldoRestante: number;
+  }>;
+  fechaRegistro: string;
 }
 
-export interface GuardiaConCompensacion {
-  guardia: Guardia;
-  clasesCompensadas: ClaseCompensada[];
-  capacidadTotalMin: number;
-  capacidadUsadaMin: number;
-}
-
-export interface ResumenCompensacion {
-  totalAdeudadoMin: number;
-  totalCompensadoMin: number;
-  saldoMin: number; // positivo = a favor (sobre-compensado), negativo = debe
-  guardias: GuardiaConCompensacion[];
-  clasesPendientes: ClaseCompensada[];
+export interface IResumenMes {
+  nombreMes: string;
+  totalHorasPed: number;
+  registros: ICompensacion[];
 }
