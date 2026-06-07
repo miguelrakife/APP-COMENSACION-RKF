@@ -3,31 +3,43 @@ on:
   push:
     branches: [ main ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      
+      - name: Configurar Node.js 24
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Instalar herramientas
-        run: |
-          npm install -g eas-cli
-          sudo apt install jq -y
-      - name: Compilar APK INSTALABLE
-        run: cd frontend && eas build -p android --profile preview --non-interactive --wait
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      - name: Obtener enlace y descargar
-        id: get-apk
+          node-version: 24
+          cache: npm
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Entrar a carpeta y compilar APK
         run: |
           cd frontend
-          URL=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].artifacts.buildUrl')
-          curl -L -o Compensacion.apk "$URL"
-      - name: Guardar APK
+          npm install
+          eas build -p android --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Descargar el APK generado
+        id: download
+        run: |
+          cd frontend
+          BUILD_ID=$(eas build:list --limit 1 --platform android --json | grep -o '"id":"[^"]*"' | head -n1 | cut -d'"' -f4)
+          curl -o Compensacion.apk "https://api.expo.dev/v2/builds/${BUILD_ID}/artifacts/build"
+      
+      - name: Guardar APK para descargar
         uses: actions/upload-artifact@v4
         with:
           name: Compensacion-APK-Instalable
           path: frontend/Compensacion.apk
+          retention-days: 30
           
