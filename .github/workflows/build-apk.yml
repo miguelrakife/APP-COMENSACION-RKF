@@ -4,7 +4,7 @@ on:
     branches: [ main ]
 
 env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -12,33 +12,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar Node.js 20
+      - name: Usar Node 24 (versión nueva, sin avisos)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
-      - name: Instalar todo en carpeta frontend
+      - name: Instalar dependencias
         run: |
           cd frontend
           npm install -g eas-cli
           npm install
 
-      - name: Compilar APK (AHORA SÍ, SIN ERRORES)
-        run: cd frontend && eas build -p android --profile preview --non-interactive --no-wait --ignore-slug-mismatch
+      - name: Compilar APK (comando limpio, sin cosas raras)
+        run: cd frontend && eas build -p android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Descargar APK
-        id: get-apk
+      - name: Descargar archivo APK
+        id: get
         run: |
           cd frontend
-          BUILD_ID=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].id')
-          curl -f -o Compensacion.apk "https://api.expo.dev/v2/builds/${BUILD_ID}/artifacts/build"
-      
-      - name: Guardar APK
+          apt update && apt install jq -y
+          URL=$(eas build:list --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          wget -O Compensacion.apk "$URL"
+
+      - name: Guardar APK para descargar
         uses: actions/upload-artifact@v4
         with:
           name: Compensacion-APK-Instalable
           path: frontend/Compensacion.apk
-          retention-days: 30
           
