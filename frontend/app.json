@@ -43,7 +43,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "27b42521-e1b0-439f-94a8-f0296ecdc096"
+        "projectId": "27b42521-e1b0-439f-94a8-f0296ecdc096",
+        "slug": "Compensacion"
       }
     }
   }
