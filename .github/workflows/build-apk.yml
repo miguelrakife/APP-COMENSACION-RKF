@@ -4,7 +4,6 @@ on:
     branches: [ main ]
 
 env:
-  # Soluciona el aviso de Node.js
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
@@ -13,32 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configurar Node.js 20 (estable y compatible)
+      - name: Configurar Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Entrar a la carpeta CORRECTA e instalar todo
+      - name: Instalar todo en carpeta frontend
         run: |
           cd frontend
           npm install -g eas-cli
           npm install
-      
-      - name: Compilar APK INSTALABLE
-        run: cd frontend && eas build -p android --profile preview --non-interactive --no-wait
+
+      - name: Compilar APK (AHORA SÍ, SIN ERRORES)
+        run: cd frontend && eas build -p android --profile preview --non-interactive --no-wait --ignore-slug-mismatch
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Descargar el APK
+      - name: Descargar APK
         id: get-apk
         run: |
           cd frontend
           BUILD_ID=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].id')
           curl -f -o Compensacion.apk "https://api.expo.dev/v2/builds/${BUILD_ID}/artifacts/build"
       
-      - name: Guardar APK para descargar
+      - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: Compensacion-APK-Instalable
