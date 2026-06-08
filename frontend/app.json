@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Compensación",
-    "slug": "Compensacion",
+    "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,8 +43,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "27b42521-e1b0-439f-94a8-f0296ecdc096",
-        "slug": "Compensacion"
+        "projectId": "27b42521-e1b0-439f-94a8-f0296ecdc096"
       }
     }
   }
