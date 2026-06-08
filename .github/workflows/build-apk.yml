@@ -4,37 +4,39 @@ on:
     branches: [ main ]
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Soluciona el aviso de Node.js
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Configurar Node.js 24
+
+      - name: Configurar Node.js 20 (estable y compatible)
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Instalar EAS CLI
-        run: npm install -g eas-cli
-
-      - name: Entrar a carpeta y compilar APK
+      - name: Entrar a la carpeta CORRECTA e instalar todo
         run: |
           cd frontend
+          npm install -g eas-cli
           npm install
-          eas build -p android --profile preview --non-interactive --no-wait
+      
+      - name: Compilar APK INSTALABLE
+        run: cd frontend && eas build -p android --profile preview --non-interactive --no-wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Descargar el APK generado
-        id: download
+      - name: Descargar el APK
+        id: get-apk
         run: |
           cd frontend
-          BUILD_ID=$(eas build:list --limit 1 --platform android --json | grep -o '"id":"[^"]*"' | head -n1 | cut -d'"' -f4)
-          curl -o Compensacion.apk "https://api.expo.dev/v2/builds/${BUILD_ID}/artifacts/build"
+          BUILD_ID=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].id')
+          curl -f -o Compensacion.apk "https://api.expo.dev/v2/builds/${BUILD_ID}/artifacts/build"
       
       - name: Guardar APK para descargar
         uses: actions/upload-artifact@v4
