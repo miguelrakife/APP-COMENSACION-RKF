@@ -8,37 +8,41 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Obtener código
+        uses: actions/checkout@v4
 
-      - name: Usar Node 24 (versión nueva, sin avisos)
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
 
       - name: Instalar dependencias
         run: |
           cd frontend
-          npm install -g eas-cli
-          npm install
+          npm install -g eas-cli@latest
+          npm ci
 
-      - name: Compilar APK (comando limpio, sin cosas raras)
-        run: cd frontend && eas build -p android --profile preview --non-interactive
+      - name: Compilar APK estable
+        run: cd frontend && eas build -p android --profile preview --non-interactive --clear-cache
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Descargar archivo APK
-        id: get
+      - name: Descargar APK
+        id: get-apk
         run: |
           cd frontend
-          apt update && apt install jq -y
-          URL=$(eas build:list --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-          wget -O Compensacion.apk "$URL"
+          sudo apt update && sudo apt install -y jq
+          BUILD_URL=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].artifacts.buildUrl')
+          curl -f -o Compensacion.apk "$BUILD_URL"
 
-      - name: Guardar APK para descargar
+      - name: Guardar para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: Compensacion-APK-Instalable
+          name: Compensacion-APK
           path: frontend/Compensacion.apk
+          retention-days: 30
           
