@@ -3,35 +3,37 @@ on:
   push:
     branches: [ main ]
 
+# Configuración para Node 24 según indica GitHub
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04  # Versión de Ubuntu compatible con Node 24
+
     steps:
-      - name: Obtener código
+      - name: Obtener el código del repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Configurar Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias y EAS CLI
         run: |
           cd frontend
           npm install -g eas-cli@latest
-          npm ci
+          npm install
 
-      - name: Compilar APK estable
-        run: cd frontend && eas build -p android --profile preview --non-interactive --clear-cache
+      - name: Compilar APK para Android
+        run: cd frontend && eas build -p android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Descargar APK
+      - name: Descargar el archivo APK generado
         id: get-apk
         run: |
           cd frontend
@@ -39,10 +41,10 @@ jobs:
           BUILD_URL=$(eas build:list --limit 1 --platform android --json | jq -r '.[0].artifacts.buildUrl')
           curl -f -o Compensacion.apk "$BUILD_URL"
 
-      - name: Guardar para descargar
+      - name: Guardar APK para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: Compensacion-APK
+          name: Compensacion-APK-Instalable
           path: frontend/Compensacion.apk
           retention-days: 30
           
