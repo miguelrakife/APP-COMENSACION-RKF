@@ -4,6 +4,9 @@
 // ==============================================
 
 export type EstadoGuardia = "ACTIVA" | "AGOTADA";
+export type GuardiaType = "semana" | "finde";
+export type Modalidad = "Guardia" | "Servicio";
+export type OrderType = "O/E" | "O/R" | "O/C";
 
 export interface IBloqueGuardia {
   idBloque: string;
@@ -13,35 +16,12 @@ export interface IBloqueGuardia {
   horasPed: number;
 }
 
-export interface IGuardia {
+export interface Guardia {
   id: string;
   fecha: string; // formato YYYY-MM-DD
-  fechaCompleta: Date;
-  minutosCronOriginal: number;
-  horasPedOriginal: number;
-  horasPedUtilizadas: number;
-  horasPedRestantes: number;
-  estado: EstadoGuardia;
-  bloquesGenerados: IBloqueGuardia[];
-}
-
-export interface ICompensacion {
-  id: string;
-  clases: number;
-  fecha: string;
-  mesAnio: string; // ej: "4/2026"
-  nombreMes: string; // ej: "abril de 2026"
-  horasPedCompensadas: number;
-  detalleConsumo: Array<{
-    fechaGuardia: string;
-    horasConsumidas: number;
-    saldoRestante: number;
-  }>;
-  fechaRegistro: string;
-}
-
-export interface IResumenMes {
-  nombreMes: string;
-  totalHorasPed: number;
-  registros: ICompensacion[];
-}
+  tipo: GuardiaType;
+  modalidad: Modalidad;
+  ordenTipo: OrderType;
+  ordenNumero: string;
+  ordenFecha: string
+  
