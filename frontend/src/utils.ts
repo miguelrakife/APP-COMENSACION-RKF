@@ -87,3 +87,34 @@ export const agruparCompensacionesPorMes = (compensaciones: any[]) => {
     return grupos;
   }, {});
 };
+
+// Funciones que faltaban para la pantalla de Guardias
+export const generarId = (): string => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
+
+export const toISODate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+export const esFinDeSemana = (fechaIso: string): boolean => {
+  const fecha = new Date(fechaIso);
+  const dia = fecha.getDay();
+  return dia === 0 || dia === 6; // Domingo o Sábado
+};
+
+export const formatFechaMilitar = (fechaIso: string): string => {
+  const [anio, mes, dia] = fechaIso.split('-');
+  return `${dia}/${mes}/${anio}`;
+};
+
+export const formatFechaMilitarLarga = (fechaIso: string): string => {
+  const fecha = new Date(fechaIso);
+  const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const diaSemana = dias[fecha.getDay()];
+  const dia = fecha.getDate();
+  const mes = meses[fecha.getMonth()];
+  const anio = fecha.getFullYear();
+  return `${diaSemana} ${dia} de ${mes} de ${anio}`;
+};
